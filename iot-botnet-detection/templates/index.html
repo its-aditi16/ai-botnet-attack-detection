@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IoT Botnet Detection</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            padding-top: 100px;
+        }
+        .box {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        input[type=file] {
+            margin: 20px;
+        }
+        input[type=submit] {
+            padding: 10px 20px;
+            background: #38bdf8;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>IoT Botnet Detection System</h1>
+        <form method="POST" action="/predict" enctype="multipart/form-data" onsubmit="showLoading()">
+            <input type="file" name="file" required><br>
+            <input type="submit" value="Analyze Traffic">
+        </form>
+
+        <div id="loading" style="display:none; margin-top:20px;">
+            <p>Analyzing... Please wait ⏳</p>
+        </div>
+
+        <script>
+        function showLoading() {
+            document.getElementById("loading").style.display = "block";
+        }
+        </script>
+    </div>
+</body>
+</html>

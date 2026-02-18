@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detection Result</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            padding-top: 80px;
+        }
+        .result-box {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 10px;
+            display: inline-block;
+            width: 500px;
+        }
+        .benign { color: #22c55e; }
+        .attack { color: #ef4444; }
+        canvas {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="result-box">
+    <h1>Analysis Result</h1>
+
+    <h2>
+        {% if status == "SAFE" %}
+            <span class="benign">✅ TRAFFIC IS SAFE</span>
+        {% else %}
+            <span class="attack">🚨 BOTNET ATTACK DETECTED</span>
+        {% endif %}
+    </h2>
+
+    <p>Total Samples: {{ total }}</p>
+    <p class="benign">Benign: {{ benign }}</p>
+    <p class="attack">Attack: {{ attack }}</p>
+
+    <canvas id="pieChart"></canvas>
+
+    <br><br>
+    <a href="/" style="color:#38bdf8;">Analyze Another File</a>
+</div>
+
+<script>
+const ctx = document.getElementById('pieChart').getContext('2d');
+new Chart(ctx, {
+    type: 'pie',
+    data: {
+        labels: ['Benign', 'Attack'],
+        datasets: [{
+            data: [{{ benign }}, {{ attack }}],
+            backgroundColor: ['#22c55e', '#ef4444']
+        }]
+    }
+});
+</script>
+
+</body>
+</html>
