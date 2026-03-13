@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShieldNet AI | IoT Botnet Defense</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --bg: #020617;
+            --glass: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #818cf8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #020617;
+            color: #f8fafc;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .background-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 80% 20%, #1e1b4b 0%, transparent 40%),
+                        radial-gradient(circle at 20% 80%, #1e1b4b 0%, transparent 40%);
+            z-index: -1;
+        }
+
+        nav {
+            padding: 24px 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+            background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-weight: 700;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-logo span {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero {
+            padding: 200px 80px 100px;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 99px;
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 64px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            margin-bottom: 24px;
+            line-height: 1.1;
+        }
+
+        h1 span {
+            color: var(--primary);
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: #94a3b8;
+            max-width: 700px;
+            margin: 0 auto 48px;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #020617;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(56, 189, 248, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .features {
+            padding: 100px 80px;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+
+        .feature-card {
+            background: var(--glass);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-8px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(56, 189, 248, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 24px;
+        }
+
+        .feature-card h3 {
+            margin-bottom: 12px;
+            font-size: 20px;
+        }
+
+        .feature-card p {
+            color: #64748b;
+            font-size: 15px;
+        }
+
+        .stats-section {
+            padding: 80px;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .stat-unit h2 {
+            font-size: 40px;
+            color: var(--primary);
+        }
+
+        .stat-unit p {
+            color: #64748b;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        footer {
+            padding: 40px 80px;
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            nav { padding: 20px; }
+            .hero { padding: 150px 20px 60px; }
+            h1 { font-size: 40px; }
+            .features { grid-template-columns: 1fr; padding: 40px 20px; }
+            .stats-section { flex-direction: column; gap: 40px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-glow"></div>
+
+    <nav>
+        <div class="nav-logo">🛡️ <span>ShieldNet AI</span></div>
+        <a href="/analyze" class="btn btn-secondary" style="padding: 10px 20px; font-size: 14px;">Launch App</a>
+    </nav>
+
+    <section class="hero">
+        <div class="badge">Next-Gen IoT Security</div>
+        <h1>Defend Your Campus From <span>Botnet Attacks</span></h1>
+        <p>Harness the power of serverless AI to detect Mirai, BASHLITE, and other malicious traffic patterns in real-time. Secure your IoT ecosystem with military-grade precision.</p>
+        
+        <div class="cta-group">
+            <a href="/analyze" class="btn btn-primary">Start Analysis</a>
+            <a href="#features" class="btn btn-secondary">Learn More</a>
+        </div>
+    </section>
+
+    <div class="stats-section">
+        <div class="stat-unit">
+            <h2>99.8%</h2>
+            <p>Detection Accuracy</p>
+        </div>
+        <div class="stat-unit">
+            <h2>< 50ms</h2>
+            <p>Inference Latency</p>
+        </div>
+        <div class="stat-unit">
+            <h2>Azure</h2>
+            <p>Cloud Native</p>
+        </div>
+    </div>
+
+    <section id="features" class="features">
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Real-time Scoring</h3>
+            <p>Instant classification of incoming telemetry data using optimized scikit-learn models deployed on Azure Functions.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h3>Advanced AI</h3>
+            <p>Trained on the comprehensive N-BaIoT dataset, identifying subtle patterns of botnet orchestration across multiple protocols.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">☁️</div>
+            <h3>Scalable Pipeline</h3>
+            <p>Serverless architecture that scales horizontally to handle millions of IoT events without the overhead of managed servers.</p>
+        </div>
+    </section>
+
+    <footer>
+        &copy; 2024 ShieldNet AI. Professional IoT Botnet Detection Pipeline.
+    </footer>
+</body>
+</html>

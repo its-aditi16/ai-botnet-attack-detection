@@ -1,66 +1,236 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Detection Result</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Result | Professional Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --primary: #38bdf8;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --bg: #020617;
+            --glass: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial;
-            background: #0f172a;
-            color: white;
-            text-align: center;
-            padding-top: 80px;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, #1e1b4b, #020617 60%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
         }
-        .result-box {
-            background: #1e293b;
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
             padding: 40px;
-            border-radius: 10px;
-            display: inline-block;
-            width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.6s ease-out;
         }
-        .benign { color: #22c55e; }
-        .attack { color: #ef4444; }
-        canvas {
-            margin-top: 30px;
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-align: center;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 32px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .status-safe {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .status-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 16px;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            margin: 0 auto 32px;
+            width: 240px;
+            height: 240px;
+        }
+
+        .btn-back {
+            display: block;
+            text-decoration: none;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 14px;
+            padding: 12px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .btn-back:hover {
+            color: var(--primary);
+            border-color: var(--border);
+            background: rgba(255, 255, 255, 0.03);
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div class="glass-card">
+            <h1>Analysis Report</h1>
 
-<div class="result-box">
-    <h1>Analysis Result</h1>
+            {% if status == "SAFE" %}
+                <div class="status-badge status-safe">🛡️ TRAFFIC IS SAFE</div>
+            {% else %}
+                <div class="status-badge status-danger">⚠️ BOTNET ATTACK DETECTED</div>
+            {% endif %}
 
-    <h2>
-        {% if status == "SAFE" %}
-            <span class="benign">✅ TRAFFIC IS SAFE</span>
-        {% else %}
-            <span class="attack">🚨 BOTNET ATTACK DETECTED</span>
-        {% endif %}
-    </h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value">{{ total }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Benign</div>
+                    <div class="stat-value" style="color: var(--success)">{{ benign }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Attack</div>
+                    <div class="stat-value" style="color: var(--danger)">{{ attack }}</div>
+                </div>
+            </div>
 
-    <p>Total Samples: {{ total }}</p>
-    <p class="benign">Benign: {{ benign }}</p>
-    <p class="attack">Attack: {{ attack }}</p>
+            <div class="chart-container" style="width: 100%; height: 300px;">
+                <canvas id="resultChart"></canvas>
+            </div>
 
-    <canvas id="pieChart"></canvas>
+            <a href="/" class="btn-back">← Analyze New Traffic</a>
+        </div>
+    </div>
 
-    <br><br>
-    <a href="/" style="color:#38bdf8;">Analyze Another File</a>
-</div>
-
-<script>
-const ctx = document.getElementById('pieChart').getContext('2d');
-new Chart(ctx, {
-    type: 'pie',
-    data: {
-        labels: ['Benign', 'Attack'],
-        datasets: [{
-            data: [{{ benign }}, {{ attack }}],
-            backgroundColor: ['#22c55e', '#ef4444']
-        }]
-    }
-});
-</script>
-
+    <script>
+        const ctx = document.getElementById('resultChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Benign', 'Attack'],
+                datasets: [{
+                    label: 'Packet Count',
+                    data: [{{ benign }}, {{ attack }}],
+                    backgroundColor: ['#22c55e', '#ef4444'],
+                    borderRadius: 8,
+                    barThickness: 60
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter' },
+                        bodyFont: { family: 'Inter' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: { family: 'Inter', size: 12 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { family: 'Inter', size: 13, weight: '600' }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>

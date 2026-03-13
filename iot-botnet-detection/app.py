@@ -9,7 +9,11 @@ scaler = joblib.load("model/scaler.pkl")
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template("landing.html")
+
+@app.route("/analyze")
+def analyze():
+    return render_template("analyze.html")
 
 @app.route("/predict", methods=["POST"])
 def predict():
