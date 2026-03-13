@@ -30,6 +30,8 @@ def predict():
     attack = int((predictions == 1).sum())
     total = len(predictions)
 
+    rate = (attack / total) * 100 if total > 0 else 0
+    
     status = "SAFE"
     if attack > benign:
         status = "BOTNET ATTACK DETECTED"
@@ -38,6 +40,7 @@ def predict():
                            total=total,
                            benign=benign,
                            attack=attack,
+                           rate=round(rate, 1),
                            status=status)
 
 if __name__ == "__main__":
