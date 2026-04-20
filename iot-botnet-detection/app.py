@@ -7,6 +7,10 @@ from email.mime.application import MIMEApplication
 from flask import Flask, request, render_template
 import pandas as pd
 import joblib
+from azure.storage.blob import BlobServiceClient
+from azure.data.tables import TableClient
+import uuid
+import datetime
 
 app = Flask(__name__)
 
@@ -19,6 +23,11 @@ SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
 SMTP_USER = os.environ.get("SMTP_USER", "adithi.yt.1@gmail.com")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "qplq asia rzah emxr")
+
+# --- Azure Storage Configuration ---
+AZURE_STORAGE_CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING", "")
+BLOB_CONTAINER_NAME = "uploaded-telemetry"
+TABLE_NAME = "PredictionLogs"
 
 def send_alert_email(filename, attack_data_df):
     """Sends an email alert to the authorizer with attack details and data."""
@@ -87,9 +96,30 @@ def analyze():
 def predict():
     file = request.files["file"]
     filename = file.filename if file.filename else "unknown_file.csv"
+    file_bytes = file.read()
     
-    # Read CSV (optimized with engine='c' which is default, but ensuring memory efficiency)
-    data = pd.read_csv(file)
+    # --- 1. Upload to Azure Blob Storage ---
+    if AZURE_STORAGE_CONNECTION_STRING:
+        try:
+            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+            container_client = blob_service_client.get_container_client(BLOB_CONTAINER_NAME)
+            
+            # Ensure container exists
+            try:
+                container_client.get_container_properties()
+            except Exception:
+                container_client.create_container()
+            
+            unique_blob_name = f"{uuid.uuid4()}-{filename}"
+            blob_client = container_client.get_blob_client(unique_blob_name)
+            blob_client.upload_blob(file_bytes, overwrite=True)
+            print(f"[*] Uploaded {filename} to Azure Blob Storage ({unique_blob_name}).")
+        except Exception as e:
+            print(f"[!] Warning: Failed to upload to Blob Storage: {e}")
+
+    # Read CSV (resetting stream since it was consumed)
+    file_stream = io.BytesIO(file_bytes)
+    data = pd.read_csv(file_stream)
     
     # Store columns for label drop without making full dataframe copies
     cols = data.columns
@@ -121,6 +151,31 @@ def predict():
         
         # Trigger the email alert
         send_alert_email(filename, attack_data)
+
+    # --- 2. Log Results to Azure Table Storage ---
+    if AZURE_STORAGE_CONNECTION_STRING:
+        try:
+            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name=TABLE_NAME)
+            # Ensure table exists safely
+            try:
+                table_client.create_table()
+            except Exception:
+                pass # Already exists
+            
+            entity = {
+                "PartitionKey": "WebScan",
+                "RowKey": str(uuid.uuid4()),
+                "Timestamp": datetime.datetime.utcnow().isoformat(),
+                "Filename": filename,
+                "Status": status,
+                "TotalPackets": total,
+                "AttackPackets": attack,
+                "AttackRate": float(round(rate, 1))
+            }
+            table_client.create_entity(entity=entity)
+            print(f"[*] Logged prediction event to Azure Table Storage.")
+        except Exception as e:
+            print(f"[!] Warning: Failed to log to Table Storage: {e}")
 
     return render_template("result.html",
                            total=total,
