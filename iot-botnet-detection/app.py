@@ -5,8 +5,12 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from flask import Flask, request, render_template
+import numpy as np
 import pandas as pd
 import joblib
+from sklearn.metrics import accuracy_score
+
+from label_utils import normalize_ground_truth_labels, select_numeric_features
 from azure.storage.blob import BlobServiceClient
 from azure.data.tables import TableClient
 import uuid
@@ -28,6 +32,22 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "qplq asia rzah emxr")
 AZURE_STORAGE_CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING", "")
 BLOB_CONTAINER_NAME = "uploaded-telemetry"
 TABLE_NAME = "PredictionLogs"
+
+# Attack probability from RandomForest; used to split "looks benign" vs uncertain vs attack-like rows
+CONFIDENCE_ATTACK = 0.75
+CONFIDENCE_BENIGN = 0.25
+
+
+def _align_features_to_scaler(X: pd.DataFrame, scaler) -> pd.DataFrame:
+    if hasattr(scaler, "feature_names_in_"):
+        expected = list(scaler.feature_names_in_)
+        X = X.copy()
+        for col in expected:
+            if col not in X.columns:
+                X[col] = 0.0
+        return X[expected]
+    return X
+
 
 def send_alert_email(filename, attack_data_df):
     """Sends an email alert to the authorizer with attack details and data."""
@@ -120,37 +140,71 @@ def predict():
     # Read CSV (resetting stream since it was consumed)
     file_stream = io.BytesIO(file_bytes)
     data = pd.read_csv(file_stream)
-    
-    # Store columns for label drop without making full dataframe copies
-    cols = data.columns
-    if "label" in cols:
-        X = data.drop("label", axis=1)
+
+    has_ground_truth = False
+    y_true = None
+    if "label" in data.columns:
+        gt_series = normalize_ground_truth_labels(data["label"])
+        if gt_series is not None and gt_series.notna().all():
+            has_ground_truth = True
+            y_true = gt_series.astype(int).values
+        X_raw = data.drop(columns=["label"])
     else:
-        X = data
+        X_raw = data
 
-    # Scale using numpy array directly
+    X = select_numeric_features(X_raw)
+    X = _align_features_to_scaler(X, scaler)
+
     data_scaled = scaler.transform(X)
-    
-    # Predict (returns numpy array)
-    predictions = model.predict(data_scaled)
 
-    # Ultra-fast numpy counting (orders of magnitude faster than pandas sums)
+    predictions = model.predict(data_scaled)
+    proba_attack = model.predict_proba(data_scaled)[:, 1]
+
     total = len(predictions)
-    attack = int(predictions.sum()) # Since attacks are 1, sum() is the count of attacks
+    attack = int(predictions.sum())
     benign = total - attack
 
+    high_conf_attack = int((proba_attack >= CONFIDENCE_ATTACK).sum())
+    high_conf_benign = int((proba_attack <= CONFIDENCE_BENIGN).sum())
+    uncertain = total - high_conf_attack - high_conf_benign
+    mean_attack_prob_pct = round(float(np.mean(proba_attack) * 100), 1) if total else 0.0
+
     rate = (attack / total) * 100 if total > 0 else 0
-    
-    status = "SAFE"
+
+    filename_lower = (filename or "").lower()
+    filename_hints_benign = "benign" in filename_lower
+
+    gt_benign = gt_attack = None
+    file_accuracy_pct = fp_count = fn_count = None
+    all_rows_true_benign = False
+    if has_ground_truth and y_true is not None:
+        gt_benign = int((y_true == 0).sum())
+        gt_attack = int((y_true == 1).sum())
+        file_accuracy_pct = round(float(accuracy_score(y_true, predictions) * 100), 2)
+        fp_count = int(((y_true == 0) & (predictions == 1)).sum())
+        fn_count = int(((y_true == 1) & (predictions == 0)).sum())
+        all_rows_true_benign = gt_attack == 0 and total > 0
+
+    attack_like_rows = attack > 0
+    evaluate_attack_in_benign_context = attack_like_rows and (
+        filename_hints_benign or (has_ground_truth and all_rows_true_benign)
+    )
+
     if attack > benign:
         status = "BOTNET ATTACK DETECTED"
-        
-        # ONLY slice the dataframe if an attack is actually detected (saves massive time)
-        # Using boolean indexing directly on the original data 
+    elif attack > 0:
+        status = "ANOMALY_ATTACK_LIKE_ROWS"
+    else:
+        status = "SAFE"
+
+    if attack > 0:
         attack_data = data.iloc[predictions == 1]
-        
-        # Trigger the email alert
-        send_alert_email(filename, attack_data)
+        if attack > benign:
+            send_alert_email(filename, attack_data)
+        elif evaluate_attack_in_benign_context and (
+            high_conf_attack > 0 or attack >= max(3, int(0.02 * total))
+        ):
+            send_alert_email(filename, attack_data)
 
     # --- 2. Log Results to Azure Table Storage ---
     if AZURE_STORAGE_CONNECTION_STRING:
@@ -177,12 +231,28 @@ def predict():
         except Exception as e:
             print(f"[!] Warning: Failed to log to Table Storage: {e}")
 
-    return render_template("result.html",
-                           total=total,
-                           benign=benign,
-                           attack=attack,
-                           rate=round(rate, 1),
-                           status=status)
+    return render_template(
+        "result.html",
+        total=total,
+        benign=benign,
+        attack=attack,
+        rate=round(rate, 1),
+        status=status,
+        high_conf_attack=high_conf_attack,
+        high_conf_benign=high_conf_benign,
+        uncertain=uncertain,
+        mean_attack_prob_pct=mean_attack_prob_pct,
+        has_ground_truth=has_ground_truth,
+        gt_benign=gt_benign,
+        gt_attack=gt_attack,
+        file_accuracy_pct=file_accuracy_pct,
+        fp_count=fp_count,
+        fn_count=fn_count,
+        filename_hints_benign=filename_hints_benign,
+        evaluate_attack_in_benign_context=evaluate_attack_in_benign_context,
+        attack_like_rows=attack_like_rows,
+        all_rows_true_benign=all_rows_true_benign,
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
